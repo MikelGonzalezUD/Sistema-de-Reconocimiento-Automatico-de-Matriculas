@@ -1,0 +1,14 @@
+#Carpeta de datos 
+data/
+
+#Carpeta de modelos
+models/
+
+#Cache
+__pycache__/
+
+#Entornos virtuales
+venv/
+
+#Notebooks
+notebooks/
