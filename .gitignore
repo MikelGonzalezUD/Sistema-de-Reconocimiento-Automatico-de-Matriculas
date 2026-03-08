@@ -1,7 +1,7 @@
 #Carpeta de datos 
 data/
 
-#Carpeta de modelos
+#Carpeta de modelos entrenados
 models/
 
 #Cache
@@ -10,5 +10,8 @@ __pycache__/
 #Entornos virtuales
 venv/
 
-#Notebooks
-notebooks/
+#Modelos preentrenados
+*.pt
+
+#Archivo de entorno
+.env
