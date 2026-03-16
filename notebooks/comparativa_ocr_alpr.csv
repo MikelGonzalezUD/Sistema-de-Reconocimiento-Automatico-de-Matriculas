@@ -1,0 +1,4 @@
+Modelo,mAP@50,CER (Real),Exactitud Placa,Latencia (ms),VRAM (MB)
+YOLO8n,0.9926,0.0292,89.82%,1.78,331.61
+YOLO11n,0.9931,0.0332,89.0%,1.77,356.99
+EasyOCR,N/A,0.3819,22.61%,19.3,151.82
