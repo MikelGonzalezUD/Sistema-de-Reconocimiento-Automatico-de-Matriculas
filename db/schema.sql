@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS vehiculos (
     vehiculo_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    matricula VARCHAR(20) UNIQUE NOT NULL CHECK (matricula = UPPER(matricula))
+    matricula VARCHAR(20) UNIQUE NOT NULL CHECK (matricula = UPPER(matricula)),
+    pais VARCHAR(20) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS camaras (
@@ -14,7 +15,8 @@ CREATE TABLE IF NOT EXISTS accesos (
     vehiculo_id INTEGER NOT NULL REFERENCES vehiculos(vehiculo_id) ON DELETE CASCADE,
     camara_id INTEGER NOT NULL REFERENCES camaras(camara_id) ON DELETE CASCADE,
     timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    confianza DECIMAL(5, 2) CHECK (confianza >= 0 AND confianza <= 100)
+    confianza DECIMAL(5, 2) CHECK (confianza >= 0 AND confianza <= 100),
+    matricula_img BYTEA,
 );
 
 CREATE INDEX idx_accesos_timestamp ON accesos(timestamp);
