@@ -1,0 +1,10 @@
+{
+  "spain_plate": {
+    "regex": "^[0-9]{4}[A-Z]{3}$",
+    "country": "ES"
+  },
+  "french_plate": {
+    "regex": "^[A-Z]{2}[0-9]{3}[A-Z]{2}$",
+    "country": "FR"
+  }
+}

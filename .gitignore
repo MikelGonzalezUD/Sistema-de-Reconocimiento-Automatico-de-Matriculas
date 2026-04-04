@@ -1,4 +1,4 @@
-#Carpeta de datos 
+#Carpeta de datasets 
 data/
 
 #Carpeta de modelos entrenados
@@ -20,9 +20,15 @@ venv/
 *run/
 
 #Listado complemento de dependencias
-full_requirements.txt
+full_requirements*.txt
 
 #Scripts de prueba y experimentación notebooks
 notebooks/*.jpg
 notebooks/comparacion_visual.py
 notebooks/entrenamiento_final.ipynb
+
+#Video de prueba
+*.MOV
+
+#Tests de base de datos
+db/*tests.py
