@@ -26,11 +26,11 @@ cp .env.example .env
 
 Con Docker Desktop instalado y en ejecución haz:
 
-*Esto levantará la base de datos (puerto 5433) y el Dashboard (puerto 8501).*
-
 ```bash
 docker-compose up -d
 ```
+
+*Esto levantará la base de datos (puerto 5433) y el Dashboard (puerto 8501).*
 
 (*)Para finalizar la ejecución
 
@@ -83,6 +83,8 @@ La base de datos se inicializa automáticamente al levantar Docker gracias al sc
 
 - Persistencia: Los datos se guardan en el volumen de Docker postgres_data.
 - Imágenes: Los recortes de las matrículas se almacenan como BYTEA y se visualizan directamente en el Dashboard.
+
+EL archivo schema.sql añade una cámara deafult a la base de datos, **importante modificar esto en base a las necesidades**
 
 ---
 
