@@ -31,4 +31,4 @@ notebooks/entrenamiento_final.ipynb
 *.MOV
 
 #Tests de base de datos
-db/*tests.py
+*db_tests.py

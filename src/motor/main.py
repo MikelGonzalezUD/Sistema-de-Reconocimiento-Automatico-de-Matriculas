@@ -11,12 +11,12 @@ from pathlib import Path
 from utils import rectify_plate, load_patterns, validate_plate
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
-root_path = Path.cwd().parent
+root_path = Path.cwd().parent.parent
 if str(root_path) not in sys.path:
     sys.path.append(str(root_path))
     
 from config import LP_MODEL_PATH, OCR_MODEL_PATH
-from db.db_manager import insertar_deteccion
+from src.database.db_manager import insertar_deteccion
 
 
 ID_CAMARA_ACTUAL = 1      # Asumimos que esta es la cámara con ID 1 en la base de datos, ajusta según tu configuración
