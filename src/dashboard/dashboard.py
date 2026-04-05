@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import psycopg2
@@ -7,11 +8,12 @@ from PIL import Image
 import sys
 from pathlib import Path
 
-root_path = Path.cwd().parent.parent
-if str(root_path) not in sys.path:
-    sys.path.append(str(root_path))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-from config import DB_NAME, DB_PORT, DB_USER, DB_PASSWORD, DB_HOST
+try:
+    from config import DB_NAME, DB_PORT, DB_USER, DB_PASSWORD, DB_HOST
+except ImportError as e:
+    print(f"Error fatal: No se encuentra config.py. {e}")
 
 # CONFIGURACIÓN DE LA PÁGINA 
 st.set_page_config(page_title="ALPR Dashboard", layout="wide")

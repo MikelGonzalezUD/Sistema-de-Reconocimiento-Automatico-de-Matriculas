@@ -24,7 +24,7 @@ CREATE INDEX idx_accesos_vehiculo ON accesos(vehiculo_id);
 CREATE INDEX idx_accesos_camara ON accesos(camara_id);
 CREATE INDEX idx_accesos_vehiculo_timestamp ON accesos(vehiculo_id, timestamp DESC);
 
-# Insertar una cámara de ejemplo (si no existe)
+-- Insertar una cámara de ejemplo (si no existe)
 INSERT INTO camaras (ubicacion, modelo) 
 VALUES ('Entrada Principal', 'Modelo A') 
 ON CONFLICT DO NOTHING;

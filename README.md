@@ -2,7 +2,45 @@
 
 Proyecto fin de grado. Desarrollo de un sistema de reconocimiento automático de matrículas.
 
+## Arquitectura del Sistema
+
+El sistema se divide en tres componentes principales:
+
+1. **Motor de IA (Local):** Ejecuta la detección y OCR aprovechando la aceleración por GPU (CUDA).
+2. **Base de Datos (Docker):** PostgreSQL para el almacenamiento persistente de detecciones e imágenes (BYTEA).
+3. **Dashboard (Docker):** Interfaz web en Streamlit para la visualización y análisis de datos.
+
+---
+
 ## Setup del entorno
+
+### 1. Clonar y configurar variables
+
+Copia el archivo de ejemplo y configura tus credenciales:
+
+```bash
+cp .env.example .env
+```
+
+### 2. Levantar Infraestructura (Docker)
+
+Con Docker Desktop instalado y en ejecución haz:
+
+*Esto levantará la base de datos (puerto 5433) y el Dashboard (puerto 8501).*
+
+```bash
+docker-compose up -d
+```
+
+(*)Para finalizar la ejecución
+
+```bash
+docker-compose stop     #Para detener los contenedores
+docker-compose down     #Borrar contenedores sin borrar datos
+docker-compose down -v  #Borrar contenedores Y datos
+```
+
+### 3. Configurar el Motor de IA (Local)
 
 1. Crear venv:
 
@@ -23,25 +61,31 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 pip install -r requirements.txt
 ```
 
-### Hardware usado
+---
 
-GPU: NVIDIA GeForce RTX 2060 SUPER
+## Uso del sistema
 
-### Base de datos
-
-Para este proyecto se ha usado postgresql.
-
-1. Configurar el servicio de postgres con los datos adecuados:
-    - Usuario
-    - Nombre de la base de datos
-    - Contrsaeña
-
-2. Cambiar el .env con los nuevos datos
-
-3. Ejecutar el script *init_db.py* para la inicialización de las tablas. (*)Modifica el archivo *schema.sql* para agregar las camaras necesarias a la base de datos.
+1. Ejecutar el motor:
 
 ```bash
-python init_db.py #Desde el directorio db
+python main.py
 ```
 
-El código principal guarda los crops de las matrículas en la base de datos como BYTEA. Para visualizar las imagenes, hacer uso de la función **recuperar_y_mostrar(acceso_id)** de *db_manager.py*.
+2. Acceder al dashboard:
+
+Abre en tu navegador: http://localhost:8501
+
+---
+
+## Base de datos
+
+La base de datos se inicializa automáticamente al levantar Docker gracias al script db/schema.sql.
+
+- Persistencia: Los datos se guardan en el volumen de Docker postgres_data.
+- Imágenes: Los recortes de las matrículas se almacenan como BYTEA y se visualizan directamente en el Dashboard.
+
+---
+
+## Hardware usado
+
+GPU: NVIDIA GeForce RTX 2060 SUPER (Compatible con CUDA)
