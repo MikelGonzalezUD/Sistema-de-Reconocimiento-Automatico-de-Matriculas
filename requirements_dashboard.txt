@@ -7,3 +7,4 @@ opencv-python-headless==4.13.0.92
 pillow==12.1.1
 matplotlib==3.10.8
 altair==6.0.0
+streamlit-autorefresh

@@ -20,6 +20,8 @@ services:
       context: .       
       dockerfile: src/dashboard/Dockerfile
     container_name: alpr_dashboard
+    volumes:
+      - .:/app
     environment:
       - DB_HOST=db  
       - DB_PORT=5432
