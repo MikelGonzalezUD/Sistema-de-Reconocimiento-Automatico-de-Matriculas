@@ -34,10 +34,11 @@ tracked_plates = {}
 
 # Cuda check
 print("Using device:", "cuda" if torch.cuda.is_available() else "cpu")
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 #Inicializar modelos
-model_lp = YOLO(LP_MODEL_PATH).to("cuda")
-model_ocr = YOLO(OCR_MODEL_PATH).to("cuda")
+model_lp = YOLO(LP_MODEL_PATH).to(device)
+model_ocr = YOLO(OCR_MODEL_PATH).to(device)
 
 # Inicializar video captura de la cámara o video
 # cap = cv2.VideoCapture("rtsp://192.168.1.136:554/stream1")
@@ -77,7 +78,7 @@ while cap.isOpened():
         cv2.imshow("Ultima Matricula Detectada", imutils.resize(plate_rectified, width=300))
 
         # 3. OCR con YOLO (Detección de caracteres)
-        results_ocr = model_ocr(plate_rectified, conf=0.3, verbose=False)
+        results_ocr = model_ocr(plate_rectified, conf=0.3, imgsz=320, verbose=False)
         
         chars = []
         for res in results_ocr:

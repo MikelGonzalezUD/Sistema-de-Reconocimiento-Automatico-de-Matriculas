@@ -4,7 +4,7 @@ import numpy as np
 import sys
 from pathlib import Path
 
-root_path = Path.cwd().parent
+root_path = Path.cwd().parent.parent
 if str(root_path) not in sys.path:
     sys.path.append(str(root_path))
 

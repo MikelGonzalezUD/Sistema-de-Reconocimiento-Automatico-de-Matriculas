@@ -25,7 +25,7 @@ full_requirements*.txt
 
 #Scripts de prueba y experimentación notebooks
 notebooks/*.jpg
-notebooks/comparacion_visual.py
+notebooks/comparacion_visual*.py
 notebooks/entrenamiento_final.ipynb
 notebooks/fasterrcnn.ipynb
 
