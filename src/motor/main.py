@@ -63,10 +63,17 @@ while cap.isOpened():
     tracks = tracker.update_tracks(detections, frame=frame)
 
     for track in tracks:
-        if not track.is_confirmed(): continue
+        if not track.is_confirmed(): 
+            continue
         
         track_id = track.track_id
         x1, y1, x2, y2 = map(int, track.to_ltrb())
+        
+        if track_id in tracked_plates and tracked_plates[track_id]["sent"]:
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2)
+            cv2.putText(frame, f"ID:{track_id} [{pais}] {best_plate}", (x1, y1 - 10), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+            continue
         
         # Crop y Rectificación
         plate_crop = frame[max(0, y1-15):y2+15, max(0, x1-15):x2+15]
@@ -118,11 +125,12 @@ while cap.isOpened():
             
             #ENVIAR A LA DB
             if len(text_list) >= VOTING_BUFFER_SIZE and not tracked_plates[track_id]["sent"]:
-                success = insertar_deteccion(best_plate, pais, conf, plate_rectified, ID_CAMARA_ACTUAL)
-                if success:
+                # success = insertar_deteccion(best_plate, pais, conf, plate_rectified, ID_CAMARA_ACTUAL)
+                # if success:
                     tracked_plates[track_id]["sent"] = True
                     print(f"✅ ID {track_id} inyectado con éxito: {best_plate}")
                     print(f"Tracked plates: {len(tracked_plates)}")
+                    print(f"{tracked_plates}")
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(frame, f"ID:{track_id} {display_info}", (x1, y1 - 10), 

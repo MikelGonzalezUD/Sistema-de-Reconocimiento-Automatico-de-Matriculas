@@ -49,10 +49,18 @@ python -m venv venv
 venv\Scripts\activate     # Windows
 ```
 
-2. Instalar pytorch CUDA 13.0
+2. Comando para instalar pytorch desde el siguiente link: https://pytorch.org/get-started/locally/
+
+Ejemplo de instalación para CUDA 13 (GPU)
 
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+```
+
+Ejemplo de instalación para CPU
+
+```bash
+pip install torch torchvision
 ```
 
 3. Instalar el resto de dependencias
