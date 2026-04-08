@@ -54,7 +54,7 @@ def get_data():
 # LÓGICA DEL DASHBOARD 
 data = get_data()
 
-data['timestamp'] = pd.to_datetime(data['timestamp'])
+data['timestamp'] = pd.to_datetime(data['timestamp'], errors='coerce')
 data['hour'] = data['timestamp'].dt.hour
 
 # FILTROS DE BUSQUEDA EN LA BARRA LATERAL
@@ -64,9 +64,15 @@ st.sidebar.header("Filtros de Búsqueda")
 search_plate = st.sidebar.text_input("Buscar matrículas (sin espacios)", "").upper()
 
 # Filtro por rango de fechas
-min_date = data['timestamp'].min().date()
-max_date = data['timestamp'].max().date()
-date_range = st.sidebar.date_input("Rango de fechas", [min_date, max_date])
+temp_data = data.dropna(subset=['timestamp'])
+
+if not temp_data.empty:
+    min_date = data['timestamp'].min().date()
+    max_date = data['timestamp'].max().date()
+    date_range = st.sidebar.date_input("Rango de fechas", [min_date, max_date]) 
+else:
+    st.sidebar.warning("Esperando datos con fecha válida...")
+    date_range = []
 
 # Aplicar filtros al dataframe
 if search_plate:

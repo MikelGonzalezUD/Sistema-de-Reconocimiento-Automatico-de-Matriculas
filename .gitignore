@@ -32,5 +32,5 @@ notebooks/fasterrcnn.ipynb
 #Video de prueba
 *.MOV
 
-#Tests de base de datos
-*db_tests.py
+#Tests de base de datos y motor
+*_tests.py

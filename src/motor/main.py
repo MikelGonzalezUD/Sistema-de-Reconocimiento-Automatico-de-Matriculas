@@ -78,7 +78,7 @@ while cap.isOpened():
         cv2.imshow("Ultima Matricula Detectada", imutils.resize(plate_rectified, width=300))
 
         # 3. OCR con YOLO (Detección de caracteres)
-        results_ocr = model_ocr(plate_rectified, conf=0.3, imgsz=320, verbose=False)
+        results_ocr = model_ocr(plate_rectified, conf=0.3, imgsz=640, verbose=False)
         
         chars = []
         for res in results_ocr:
@@ -122,6 +122,7 @@ while cap.isOpened():
                 if success:
                     tracked_plates[track_id]["sent"] = True
                     print(f"✅ ID {track_id} inyectado con éxito: {best_plate}")
+                    print(f"Tracked plates: {len(tracked_plates)}")
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(frame, f"ID:{track_id} {display_info}", (x1, y1 - 10), 
