@@ -42,10 +42,10 @@ docker-compose down -v  #Borrar contenedores Y datos
 
 ### 3. Configurar el Motor de IA (Local)
 
-1. Crear venv:
+1. Crear venv (python 3.10):
 
 ```bash
-python -m venv venv
+py -3.10 -m venv venv
 venv\Scripts\activate     # Windows
 ```
 
