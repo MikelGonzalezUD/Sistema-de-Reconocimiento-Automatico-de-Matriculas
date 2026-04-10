@@ -6,5 +6,9 @@
   "french_plate": {
     "regex": "^[A-Z]{2}[0-9]{3}[A-Z]{2}$",
     "country": "FR"
+  },
+  "finnish_plate": {
+    "regex": "^[A-Z]{3}[0-9]{3}$",
+    "country": "FI"
   }
 }

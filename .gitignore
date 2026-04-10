@@ -29,8 +29,9 @@ notebooks/comparacion_visual*.py
 notebooks/entrenamiento_final.ipynb
 notebooks/fasterrcnn.ipynb
 
-#Video de prueba
+#Videos de prueba
 *.MOV
+*.mp4
 
 #Tests de base de datos y motor
 *_tests.py

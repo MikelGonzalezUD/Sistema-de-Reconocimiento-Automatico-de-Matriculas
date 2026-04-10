@@ -68,6 +68,10 @@ while cap.isOpened():
         
         track_id = track.track_id
         x1, y1, x2, y2 = map(int, track.to_ltrb())
+        area = (x2 - x1) * (y2 - y1)
+        # print(f"Area: {area}")
+        if area < 400: 
+            continue
         
         if track_id in tracked_plates and tracked_plates[track_id]["sent"]:
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2)
@@ -85,7 +89,7 @@ while cap.isOpened():
         cv2.imshow("Ultima Matricula Detectada", imutils.resize(plate_rectified, width=300))
 
         # 3. OCR con YOLO (Detección de caracteres)
-        results_ocr = model_ocr(plate_rectified, conf=0.3, imgsz=320, verbose=False)
+        results_ocr = model_ocr(plate_rectified, conf=0.4, imgsz=640, verbose=False)
         
         chars = []
         for res in results_ocr:
