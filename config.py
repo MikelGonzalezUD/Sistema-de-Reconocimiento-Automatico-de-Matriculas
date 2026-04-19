@@ -21,3 +21,6 @@ DB_PORT = os.getenv("DB_PORT", "5433")
 #MAIN
 LP_MODEL_PATH = ROOT_DIR / os.getenv("LP_MODEL_PATH")
 OCR_MODEL_PATH = ROOT_DIR / os.getenv("OCR_MODEL_PATH")
+
+#CAMARA ID
+CAMERA_ID = int(os.getenv("CAMERA_ID", 1))
