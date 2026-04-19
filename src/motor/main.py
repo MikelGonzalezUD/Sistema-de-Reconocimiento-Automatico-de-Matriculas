@@ -19,9 +19,11 @@ from config import LP_MODEL_PATH, OCR_MODEL_PATH, CAMERA_ID
 from src.database.db_manager import insertar_deteccion
 
 
-TRACK_MAX_AGE = 20        # Frames para mantener un track perdido vivo
+TRACK_MAX_AGE = 40        # Frames para mantener un track perdido vivo
 VOTING_BUFFER_SIZE = 10   # Numero de frames para agregar y decidir el "mejor" resultado
-OCR_FRAME_SKIP = 3       # Procesar OCR cada N frames para reducir carga computacional
+FRAME_SKIP = 3            # Procesar cada N frames para reducir carga computacional
+frame_count = 0
+ocr_frame_count = 0
 
 # Inicializar Tracker DeepSort
 tracker = DeepSort(max_age=TRACK_MAX_AGE, n_init=3, max_iou_distance=0.7)
@@ -41,7 +43,7 @@ model_lp = YOLO(LP_MODEL_PATH).to(device)
 model_ocr = YOLO(OCR_MODEL_PATH).to(device)
 
 # Inicializar video captura de la cámara o video
-# cap = cv2.VideoCapture("rtsp://192.168.1.136:554/stream1")
+# cap = cv2.VideoCapture("rtsp://192.168.1.132:554/stream1")
 # cap = cv2.VideoCapture("https://192.168.1.131:8080/video")
 cap = cv2.VideoCapture("parking2.MOV")
 
@@ -49,6 +51,14 @@ cap = cv2.VideoCapture("parking2.MOV")
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret: break
+    
+    frame_count += 1
+    if frame_count > 1000:  # Reiniciar contador para evitar overflow
+        frame_count = 0
+    if frame_count % FRAME_SKIP != 0:
+        continue
+    
+    frame = cv2.resize(frame, (640, 360))
 
     # 1. Detección de Placas
     results = model_lp(frame, conf=0.5, verbose=False)
@@ -77,6 +87,12 @@ while cap.isOpened():
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2)
             cv2.putText(frame, f"ID:{track_id} [{pais}] {best_plate}", (x1, y1 - 10), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+            continue
+        
+        ocr_frame_count += 1
+        if ocr_frame_count > 10000:  # Reiniciar contador para evitar overflow
+            ocr_frame_count = 0
+        if ocr_frame_count % (FRAME_SKIP) != 0:
             continue
         
         # Crop y Rectificación
@@ -129,8 +145,8 @@ while cap.isOpened():
             
             #ENVIAR A LA DB
             if len(text_list) >= VOTING_BUFFER_SIZE and not tracked_plates[track_id]["sent"]:
-                success = insertar_deteccion(best_plate, pais, conf, plate_rectified, CAMERA_ID)
-                if success:
+                # success = insertar_deteccion(best_plate, pais, conf, plate_rectified, CAMERA_ID)
+                # if success:
                     tracked_plates[track_id]["sent"] = True
                     print(f"✅ ID {track_id} inyectado con éxito: {best_plate}")
                     print(f"Tracked plates: {len(tracked_plates)}")
