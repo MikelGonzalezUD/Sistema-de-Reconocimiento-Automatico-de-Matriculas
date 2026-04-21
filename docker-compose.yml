@@ -15,6 +15,21 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
+  api:
+    build:
+      context: .       
+      dockerfile: src/api/Dockerfile
+    container_name: alpr_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+    env_file: 
+      .env
+
   dashboard:
     build:
       context: .       

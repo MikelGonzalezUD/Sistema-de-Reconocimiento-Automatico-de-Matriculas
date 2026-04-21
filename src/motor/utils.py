@@ -1,6 +1,7 @@
 import base64
 
 import cv2
+import requests
 import numpy as np
 import json
 import re
@@ -82,3 +83,28 @@ def validate_plate(text, patterns):
         if re.match(info['regex'], text):
             return info['country']
     return None
+
+def enviar_deteccion(matricula, pais, confianza, imagen_np, camara_id, API_URL, API_KEY):
+    # Convertir imagen a bytes
+    _, img_encoded = cv2.imencode('.jpg', imagen_np)
+    
+    # Preparar datos y archivo
+    payload = {
+        'matricula': matricula,
+        'pais': pais,
+        'confianza': confianza,
+        'camara_id': camara_id
+    }
+    files = [
+        ('imagen', ('plate.jpg', img_encoded.tobytes(), 'image/jpeg'))
+    ]
+
+    try:
+        headers = {
+            'x-api-key': API_KEY
+        }
+        response = requests.post(API_URL, data=payload, files=files, headers=headers, timeout=5)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Error enviando a API: {e}")
+        return False

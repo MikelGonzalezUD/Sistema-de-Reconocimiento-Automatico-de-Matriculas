@@ -8,20 +8,20 @@ import numpy as np
 import torch
 import sys
 from pathlib import Path
-from utils import rectify_plate, load_patterns, validate_plate
+from utils import rectify_plate, load_patterns, validate_plate, enviar_deteccion
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
 root_path = Path.cwd().parent.parent
 if str(root_path) not in sys.path:
     sys.path.append(str(root_path))
     
-from config import LP_MODEL_PATH, OCR_MODEL_PATH, CAMERA_ID
+from config import LP_MODEL_PATH, OCR_MODEL_PATH, CAMERA_ID, API_URL, API_KEY
 from src.database.db_manager import insertar_deteccion
 
 
 TRACK_MAX_AGE = 40        # Frames para mantener un track perdido vivo
 VOTING_BUFFER_SIZE = 10   # Numero de frames para agregar y decidir el "mejor" resultado
-FRAME_SKIP = 3            # Procesar cada N frames para reducir carga computacional
+FRAME_SKIP = 2            # Procesar cada N frames para reducir carga computacional
 frame_count = 0
 ocr_frame_count = 0
 
@@ -145,8 +145,8 @@ while cap.isOpened():
             
             #ENVIAR A LA DB
             if len(text_list) >= VOTING_BUFFER_SIZE and not tracked_plates[track_id]["sent"]:
-                # success = insertar_deteccion(best_plate, pais, conf, plate_rectified, CAMERA_ID)
-                # if success:
+                success = enviar_deteccion(best_plate, pais, conf, plate_rectified, CAMERA_ID, API_URL, API_KEY)
+                if success:
                     tracked_plates[track_id]["sent"] = True
                     print(f"✅ ID {track_id} inyectado con éxito: {best_plate}")
                     print(f"Tracked plates: {len(tracked_plates)}")

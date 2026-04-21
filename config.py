@@ -24,3 +24,7 @@ OCR_MODEL_PATH = ROOT_DIR / os.getenv("OCR_MODEL_PATH")
 
 #CAMARA ID
 CAMERA_ID = int(os.getenv("CAMERA_ID", 1))
+
+#API
+API_URL = os.getenv("API_URL", "http://localhost:8000/deteccion")
+API_KEY = os.getenv("API_KEY")
