@@ -22,7 +22,17 @@ Copia el archivo de ejemplo y configura tus credenciales:
 cp .env.example .env
 ```
 
-### 2. Levantar Infraestructura (Docker)
+### 2. Clonar y configurar variables de autenticación
+
+Copia el archivo de ejemplo y configura tus credenciales:
+
+```bash
+cp .config_auth.yaml.example .config_auth.yaml
+```
+
+Para crear una contraseña hasheada se puede el script *cont_generator.py* cambiando la variable password por la que se desee. Al iniciar sesión, se solicitará esa contraseña junto con el user configurado en el .yaml (por defecto, admin).
+
+### 3. Levantar Infraestructura (Docker)
 
 Con Docker Desktop instalado y en ejecución haz:
 

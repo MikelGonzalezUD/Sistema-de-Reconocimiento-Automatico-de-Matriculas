@@ -35,3 +35,6 @@ notebooks/fasterrcnn.ipynb
 
 #Tests de base de datos y motor
 *_tests.py
+
+#Configuracion de autenticación (contiene contraseñas hasheadas, no subir a repositorio)
+src/dashboard/config_auth.yaml

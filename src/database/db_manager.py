@@ -66,9 +66,7 @@ def recuperar_y_mostrar(acceso_id):
     """
     Obtener la imagen de un acceso específico y mostrarla  
     """
-    conn = psycopg2.connect(
-        dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT
-    )
+    conn = get_connection()
     cur = conn.cursor()
     
     # Pedimos los bytes de la imagen
@@ -89,3 +87,47 @@ def recuperar_y_mostrar(acceso_id):
     
     cur.close()
     conn.close()
+
+
+def insertar_camara(ubicacion, modelo):
+    """
+    Inserta una nueva cámara en la base de datos y devuelve su ID.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO camaras (ubicacion, modelo)
+            VALUES (%s, %s)
+            RETURNING camara_id;
+        """, (ubicacion, modelo))
+        camara_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        return camara_id
+    except Exception as e:
+        print(f"Error insertando cámara: {e}")
+        if conn: conn.rollback()
+        return None
+    finally:
+        if conn: conn.close()
+        
+def listar_camaras():
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT camara_id, ubicacion, modelo FROM camaras ORDER BY camara_id DESC;")
+        rows = cur.fetchall()
+        
+        camaras = []
+        for r in rows:
+            camaras.append({
+                "id": r[0],
+                "ubicacion": r[1],
+                "modelo": r[2]
+            })
+        return camaras
+    finally:
+        if conn: conn.close()

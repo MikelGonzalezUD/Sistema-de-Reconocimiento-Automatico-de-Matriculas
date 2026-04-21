@@ -45,7 +45,7 @@ model_ocr = YOLO(OCR_MODEL_PATH).to(device)
 # Inicializar video captura de la cámara o video
 # cap = cv2.VideoCapture("rtsp://192.168.1.132:554/stream1")
 # cap = cv2.VideoCapture("https://192.168.1.131:8080/video")
-cap = cv2.VideoCapture("parking2.MOV")
+cap = cv2.VideoCapture("parking.MOV")
 
 
 while cap.isOpened():
@@ -102,7 +102,7 @@ while cap.isOpened():
         # plate_rectified = rectify_plate(plate_crop)
         plate_rectified = plate_crop
         
-        cv2.imshow("Ultima Matricula Detectada", imutils.resize(plate_rectified, width=300))
+        # cv2.imshow("Ultima Matricula Detectada", imutils.resize(plate_rectified, width=300))
 
         # 3. OCR con YOLO (Detección de caracteres)
         results_ocr = model_ocr(plate_rectified, conf=0.4, imgsz=640, verbose=False)
@@ -149,8 +149,8 @@ while cap.isOpened():
                 if success:
                     tracked_plates[track_id]["sent"] = True
                     print(f"✅ ID {track_id} inyectado con éxito: {best_plate}")
-                    print(f"Tracked plates: {len(tracked_plates)}")
-                    print(f"{tracked_plates}")
+                    # print(f"Tracked plates: {len(tracked_plates)}")
+                    # print(f"{tracked_plates}")
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(frame, f"ID:{track_id} {display_info}", (x1, y1 - 10), 

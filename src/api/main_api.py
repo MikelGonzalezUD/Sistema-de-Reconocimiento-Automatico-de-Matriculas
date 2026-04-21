@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, Depe
 import cv2
 import numpy as np
 import uvicorn
-from src.database.db_manager import insertar_deteccion
+from src.database.db_manager import insertar_deteccion, insertar_camara, listar_camaras
 import os
 import sys
 
@@ -53,6 +53,19 @@ async def recibir_deteccion(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/camaras")
+async def api_obtener_camaras(token: str = Depends(verify_api_key)):
+    try:
+        camaras = listar_camaras()
+        return {"status": "success", "data": camaras}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))   
+    
+@app.post("/camaras")
+async def crear_camara(ubicacion: str = Form(...), modelo: str = Form(...), _ = Depends(verify_api_key)):
+    insertar_camara(ubicacion, modelo)
+    return {"status": "Cámara creada"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

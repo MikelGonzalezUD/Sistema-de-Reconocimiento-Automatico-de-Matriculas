@@ -1,0 +1,13 @@
+credentials:
+  usernames:
+    admin:
+      email: admin@sistema.com
+      name: Administrador Central
+      password: "PASSWORD_HASHEADO"   #Sustituir la contraseña hasheada
+cookie:
+  expiry_days: 30
+  key: "alguna_clave_aleatoria_para_la_cookie"
+  name: "alpr_auth"
+preauthorized:
+  emails:
+    - correo@gmail.com
