@@ -45,7 +45,7 @@ model_ocr = YOLO(OCR_MODEL_PATH).to(device)
 # Inicializar video captura de la cámara o video
 # cap = cv2.VideoCapture("rtsp://192.168.1.132:554/stream1")
 # cap = cv2.VideoCapture("https://192.168.1.131:8080/video")
-cap = cv2.VideoCapture("parking.MOV")
+cap = cv2.VideoCapture("parking2.MOV")
 
 
 while cap.isOpened():

@@ -19,6 +19,13 @@ CREATE TABLE IF NOT EXISTS accesos (
     matricula_img BYTEA
 );
 
+-- CREATE TABLE IF NOT EXISTS autorizados (
+--     autorizado_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--     matricula VARCHAR(20) UNIQUE NOT NULL CHECK (matricula = UPPER(matricula)),
+--     notas TEXT,
+--     fecha_alta TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+-- );
+
 CREATE INDEX idx_accesos_timestamp ON accesos(timestamp);
 CREATE INDEX idx_accesos_vehiculo ON accesos(vehiculo_id);
 CREATE INDEX idx_accesos_camara ON accesos(camara_id);
