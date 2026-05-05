@@ -108,3 +108,39 @@ def enviar_deteccion(matricula, pais, confianza, imagen_np, camara_id, API_URL, 
     except Exception as e:
         print(f"Error enviando a API: {e}")
         return False
+    
+    
+def ordenar_ocr(chars, results_ocr, char_label, threshold=10):
+    for res in results_ocr:
+        for b in res.boxes:
+            # Guardamos la posición X y el nombre de la clase (el caracter)
+            x_center = b.xywh[0][0].item()
+            y_center = b.xywh[0][1].item()
+            chars.append((x_center, y_center, char_label))
+                
+    # ORDENAR POR Y (Altura)
+    chars.sort(key=lambda x: x[1])
+    
+    lines = []
+    threshold = 10 
+    
+    for char in chars:
+        placed = False
+        for line in lines:
+            if abs(char[1] - line[0][1]) < threshold:
+                line.append(char)
+                placed = True
+                break
+        if not placed:
+            lines.append([char])
+    
+    # ORDENAR POR X (Izquierda a derecha)
+    for line in lines:
+        line.sort(key=lambda x: x[0])
+        
+    lines.sort(key=lambda line: line[0][1])
+    clean_text = "".join(
+        char[2] for line in lines for char in line
+    ).upper()
+    
+    return clean_text

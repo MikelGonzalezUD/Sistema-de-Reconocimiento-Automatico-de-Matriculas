@@ -44,7 +44,7 @@ model_ocr = YOLO(OCR_MODEL_PATH).to(device)
 
 # Inicializar video captura de la cámara o video
 # cap = cv2.VideoCapture("rtsp://192.168.1.132:554/stream1")
-# cap = cv2.VideoCapture("https://192.168.1.131:8080/video")
+#cap = cv2.VideoCapture("https://192.168.1.130:8080/video")
 cap = cv2.VideoCapture("parking2.MOV")
 
 
@@ -112,12 +112,36 @@ while cap.isOpened():
             for b in res.boxes:
                 # Guardamos la posición X y el nombre de la clase (el caracter)
                 x_center = b.xywh[0][0].item()
+                y_center = b.xywh[0][1].item()
                 char_label = model_ocr.names[int(b.cls[0])]
-                chars.append((x_center, char_label))
+                chars.append((x_center, y_center, char_label))
+                
+        # ORDENAR POR Y (Altura)
+        chars.sort(key=lambda x: x[1])
+        
+        lines = []
+        threshold = np.mean([b.xywh[0][3].item() for res in results_ocr for b in res.boxes]) * 0.5
+        
+        for char in chars:
+            placed = False
+            for line in lines:
+                # si está cerca en Y, pertenece a esa línea
+                if abs(char[1] - line[0][1]) < threshold:
+                    line.append(char)
+                    placed = True
+                    break
+            if not placed:
+                lines.append([char])
         
         # ORDENAR POR X (Izquierda a derecha)
-        chars.sort(key=lambda x: x[0])
-        clean_text = "".join([c[1] for c in chars]).upper()
+        for line in lines:
+            line.sort(key=lambda x: x[0])
+            
+        lines.sort(key=lambda line: line[0][1])
+        clean_text = "".join(
+            char[2] for line in lines for char in line
+        ).upper()
+
 
         # 4. Post-procesamiento con el JSON (desde utils)
         pais_detectado = validate_plate(clean_text, patterns)
