@@ -32,7 +32,8 @@ def get_data():
         # Consulta JOIN para tener texto e imagen juntos
         query = """
             SELECT 
-                v.matricula, 
+                v.matricula,
+                CASE WHEN a.autorizado THEN '✅ SI' ELSE '❌ NO' END as "Permitido", 
                 v.pais, 
                 a.timestamp, 
                 a.confianza, 
@@ -141,6 +142,7 @@ if authentication_status:
                             st.write(f"**Matrícula:** {row['matricula']} ({row['pais']})")
                             st.write(f"📅 {row['timestamp'].strftime('%d/%m/%Y %H:%M:%S')}")
                             st.write(f"🎯 Confianza: **{row['confianza']}%**")
+                            st.write(f"Permitido: {row['Permitido']}")
                             st.write("---")
         else:
             st.warning("No hay datos registrados en la base de datos aún.")
@@ -200,43 +202,85 @@ if authentication_status:
             st.dataframe(heatmap_data.style.background_gradient(cmap="YlGnBu"), width='stretch')
             
     with tab_admin:
-        st.header("Gestión de Cámaras")
-        st.subheader("Cámaras Registradas")
+        st.header("Panel de Administración")
         
-        headers = {'x-api-key': API_KEY}
+        subtab_camaras, subtab_autorizados = st.tabs(["Gestión de cámaras", "Lista de autorizados"])
         
-        try:
-            response = requests.get("http://api:8000/camaras", headers=headers)
+        with subtab_camaras:
+            st.subheader("Cámaras Registradas")
+            headers = {'x-api-key': API_KEY}
             
-            if response.status_code == 200:
-                lista_camaras = response.json()['data']
-                if lista_camaras:
-                    # Convertimos el JSON de la API a un DataFrame de Pandas para mostrarlo bonito
-                    df_visual = pd.DataFrame(lista_camaras)
-                    st.dataframe(df_visual, width='stretch')
-                else:
-                    st.info("No hay cámaras registradas.")
-            else:
-                st.error("Error al obtener cámaras de la API")
-        except Exception as e:
-            st.error(f"Error de conexión: {e}")
-            
-        st.write("---")
-        
-        with st.form("registro_camara"):
-            ubicacion = st.text_input("Ubicación exacta")
-            modelo = st.text_input("Modelo de cámara")
-            btn_guardar = st.form_submit_button("Registrar nueva cámara")
-            
-            if btn_guardar:
-                payload = {'ubicacion': ubicacion, 'modelo': modelo}
-                response = requests.post("http://api:8000/camaras", data=payload, headers=headers)
+            try:
+                response = requests.get("http://api:8000/camaras", headers=headers)
+                
                 if response.status_code == 200:
-                    st.success("¡Cámara registrada!")
+                    lista_camaras = response.json()['data']
+                    if lista_camaras:
+                        # Convertimos el JSON de la API a un DataFrame de Pandas para mostrarlo bonito
+                        df_visual = pd.DataFrame(lista_camaras)
+                        st.dataframe(df_visual, width='stretch')
+                    else:
+                        st.info("No hay cámaras registradas.")
+                else:
+                    st.error("Error al obtener cámaras de la API")
+            except Exception as e:
+                st.error(f"Error de conexión: {e}")
+                
+            st.write("---")
+            
+            with st.form("registro_camara"):
+                ubicacion = st.text_input("Ubicación exacta")
+                modelo = st.text_input("Modelo de cámara")
+                btn_guardar = st.form_submit_button("Registrar nueva cámara")
+                
+                if btn_guardar:
+                    payload = {'ubicacion': ubicacion, 'modelo': modelo}
+                    response = requests.post("http://api:8000/camaras", data=payload, headers=headers)
+                    if response.status_code == 200:
+                        st.success("¡Cámara registrada!")
+                        
+        with subtab_autorizados:
+            st.subheader("Gestión de vehículos autorizados")
+            
+            # Formulario para añadir
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                nueva_matricula = st.text_input("Nueva matrícula a autorizar", placeholder="1234ABC").upper()
+                nueva_matricula = "".join(nueva_matricula.split())  # Eliminar espacios" 
+                print(f"DEBUG: Nueva matrícula ingresada: '{nueva_matricula}'")  # Debug para ver el valor exacto
+            with col2:
+                st.write(" ") # Espaciado
+                if st.button("➕ Autorizar"):
+                    if nueva_matricula:
+                        res = requests.post("http://api:8000/autorizados", data={'matricula': nueva_matricula}, headers=headers)
+                        st.success(f"Matrícula {nueva_matricula} añadida.")
+                        st.rerun()
+            
+            st.write("---")
+            
+            # Mostrar Lista y opción de eliminar
+            try:
+                res_list = requests.get("http://api:8000/autorizados", headers=headers)
+                if res_list.status_code == 200:
+                    lista_auth = res_list.json()['data']
+                    if lista_auth:
+                        df_auth = pd.DataFrame(lista_auth)
+                        st.table(df_auth[['matricula', 'fecha']]) # Tabla sencilla para control
+                        
+                        # Opción para eliminar
+                        mat_eliminar = st.selectbox("Selecciona matrícula para quitar acceso", [m['matricula'] for m in lista_auth])
+                        if st.button("Quitar autorización"):
+                            requests.delete(f"http://api:8000/autorizados/{mat_eliminar}", headers=headers)
+                            st.warning(f"Acceso revocado para {mat_eliminar}")
+                            st.rerun()
+                    else:
+                        st.info("No hay vehículos autorizados.")
+            except Exception as e:
+                st.error(f"Error al cargar autorizados: {e}")
 
-    # Botón para refrescar manualmente
-    if st.button('Actualizar Datos'):
-        st.rerun()
+        # Botón para refrescar manualmente
+        if st.button('Actualizar Datos'):
+            st.rerun()
         
 elif authentication_status is False:
     st.error('Usuario o contraseña incorrectos')

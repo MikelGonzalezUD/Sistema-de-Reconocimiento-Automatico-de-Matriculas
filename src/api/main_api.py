@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, Depe
 import cv2
 import numpy as np
 import uvicorn
-from src.database.db_manager import insertar_deteccion, insertar_camara, listar_camaras
+from src.database.db_manager import insertar_deteccion, insertar_camara, listar_camaras, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
 import os
 import sys
 
@@ -69,3 +69,21 @@ async def crear_camara(ubicacion: str = Form(...), modelo: str = Form(...), _ = 
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    
+@app.get("/autorizados")
+async def api_listar_autorizados(_ = Depends(verify_api_key)):
+    data = listar_vehiculos_autorizados()
+    return {"status": "success", "data": data}
+
+@app.post("/autorizados")
+async def api_añadir_autorizado(matricula: str = Form(...), _ = Depends(verify_api_key)):
+    res = insertar_vehiculo_autorizado(matricula)
+    if res:
+        return {"status": "success", "message": "Matrícula autorizada"}
+    return {"status": "exists", "message": "La matrícula ya estaba autorizada"}
+
+@app.delete("/autorizados/{matricula}")
+async def api_eliminar_autorizado(matricula: str, _ = Depends(verify_api_key)):
+    eliminar_vehiculo_autorizado(matricula)
+    return {"status": "success", "message": "Autorización revocada"}

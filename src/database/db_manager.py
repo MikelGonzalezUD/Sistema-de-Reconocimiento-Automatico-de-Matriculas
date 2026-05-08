@@ -47,9 +47,9 @@ def insertar_deteccion(matricula, pais, confianza, imagen_np, camara_id):
 
         # Insertar el acceso
         cur.execute("""
-            INSERT INTO accesos (vehiculo_id, camara_id, confianza, matricula_img)
-            VALUES (%s, %s, %s, %s)
-        """, (vehiculo_id, camara_id, confianza, psycopg2.Binary(content)))
+            INSERT INTO accesos (vehiculo_id, camara_id, confianza, matricula_img, autorizado)
+            VALUES (%s, %s, %s, %s, (SELECT EXISTS(SELECT 1 FROM autorizados WHERE matricula = %s)))
+        """, (vehiculo_id, camara_id, confianza, psycopg2.Binary(content), matricula.upper()))
 
         conn.commit()
         cur.close()
@@ -129,5 +129,44 @@ def listar_camaras():
                 "modelo": r[2]
             })
         return camaras
+    finally:
+        if conn: conn.close()
+        
+        
+def listar_vehiculos_autorizados():
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT autorizado_id, matricula, fecha_alta FROM autorizados ORDER BY fecha_alta DESC;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "matricula": r[1], "fecha": r[2].strftime("%Y-%m-%d %H:%M:%S")} for r in rows]
+    finally:
+        if conn: conn.close()
+        
+        
+def insertar_vehiculo_autorizado(matricula):
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO autorizados (matricula) VALUES (%s) ON CONFLICT DO NOTHING RETURNING autorizado_id;", (matricula.upper(),))
+        result = cur.fetchone()
+        conn.commit()
+        return result[0] if result else None
+    except Exception as e:
+        if conn: conn.rollback()
+        raise e
+    finally:
+        if conn: conn.close()
+        
+def eliminar_vehiculo_autorizado(matricula):
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM autorizados WHERE matricula = %s;", (matricula.upper(),))
+        conn.commit()
+        return True
     finally:
         if conn: conn.close()

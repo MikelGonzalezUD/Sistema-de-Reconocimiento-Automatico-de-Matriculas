@@ -16,20 +16,22 @@ CREATE TABLE IF NOT EXISTS accesos (
     camara_id INTEGER NOT NULL REFERENCES camaras(camara_id) ON DELETE CASCADE,
     timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     confianza DECIMAL(5, 2) CHECK (confianza >= 0 AND confianza <= 100),
+    autorizado BOOLEAN DEFAULT FALSE,
     matricula_img BYTEA
 );
 
--- CREATE TABLE IF NOT EXISTS autorizados (
---     autorizado_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
---     matricula VARCHAR(20) UNIQUE NOT NULL CHECK (matricula = UPPER(matricula)),
---     notas TEXT,
---     fecha_alta TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
--- );
+CREATE TABLE IF NOT EXISTS autorizados (
+    autorizado_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    matricula VARCHAR(20) UNIQUE NOT NULL CHECK (matricula = UPPER(matricula)),
+    notas TEXT,
+    fecha_alta TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE INDEX idx_accesos_timestamp ON accesos(timestamp);
 CREATE INDEX idx_accesos_vehiculo ON accesos(vehiculo_id);
 CREATE INDEX idx_accesos_camara ON accesos(camara_id);
 CREATE INDEX idx_accesos_vehiculo_timestamp ON accesos(vehiculo_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_autorizados_matricula ON autorizados(matricula);
 
 -- Insertar una cámara de ejemplo (si no existe)
 INSERT INTO camaras (ubicacion, modelo) 
