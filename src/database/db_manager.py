@@ -133,6 +133,18 @@ def listar_camaras():
         if conn: conn.close()
         
         
+def eliminar_camara(camara_id):
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM camaras WHERE camara_id = %s;", (camara_id,))
+        conn.commit()
+        return True
+    finally:
+        if conn: conn.close()
+        
+        
 def listar_vehiculos_autorizados():
     conn = None
     try:

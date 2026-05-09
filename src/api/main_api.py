@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, Depe
 import cv2
 import numpy as np
 import uvicorn
-from src.database.db_manager import insertar_deteccion, insertar_camara, listar_camaras, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
+from src.database.db_manager import insertar_deteccion, listar_camaras, insertar_camara, eliminar_camara, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
 import os
 import sys
 
@@ -66,11 +66,17 @@ async def api_obtener_camaras(token: str = Depends(verify_api_key)):
 async def crear_camara(ubicacion: str = Form(...), modelo: str = Form(...), _ = Depends(verify_api_key)):
     insertar_camara(ubicacion, modelo)
     return {"status": "Cámara creada"}
+    
+@app.delete("/camaras/{camara_id}")
+async def api_eliminar_camara(camara_id: int, _ = Depends(verify_api_key)):
+    res = eliminar_camara(camara_id)
+    if res:
+        return {"status": "success", "message": "Cámara eliminada"}
+    else:
+        # Si la función devolvió False, lanzamos un error claro
+        raise HTTPException(status_code=404, detail="ID de cámara no encontrado en la base de datos")
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-    
-    
+
 @app.get("/autorizados")
 async def api_listar_autorizados(_ = Depends(verify_api_key)):
     data = listar_vehiculos_autorizados()
@@ -87,3 +93,10 @@ async def api_añadir_autorizado(matricula: str = Form(...), _ = Depends(verify_
 async def api_eliminar_autorizado(matricula: str, _ = Depends(verify_api_key)):
     eliminar_vehiculo_autorizado(matricula)
     return {"status": "success", "message": "Autorización revocada"}
+
+
+
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

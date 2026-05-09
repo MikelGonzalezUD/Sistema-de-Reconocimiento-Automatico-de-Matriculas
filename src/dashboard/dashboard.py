@@ -207,26 +207,10 @@ if authentication_status:
         subtab_camaras, subtab_autorizados = st.tabs(["Gestión de cámaras", "Lista de autorizados"])
         
         with subtab_camaras:
-            st.subheader("Cámaras Registradas")
+            st.subheader("Gestión de cámaras registradas")
             headers = {'x-api-key': API_KEY}
             
-            try:
-                response = requests.get("http://api:8000/camaras", headers=headers)
-                
-                if response.status_code == 200:
-                    lista_camaras = response.json()['data']
-                    if lista_camaras:
-                        # Convertimos el JSON de la API a un DataFrame de Pandas para mostrarlo bonito
-                        df_visual = pd.DataFrame(lista_camaras)
-                        st.dataframe(df_visual, width='stretch')
-                    else:
-                        st.info("No hay cámaras registradas.")
-                else:
-                    st.error("Error al obtener cámaras de la API")
-            except Exception as e:
-                st.error(f"Error de conexión: {e}")
-                
-            st.write("---")
+            st.write("Formulario para registrar nueva cámara:")
             
             with st.form("registro_camara"):
                 ubicacion = st.text_input("Ubicación exacta")
@@ -239,18 +223,68 @@ if authentication_status:
                     if response.status_code == 200:
                         st.success("¡Cámara registrada!")
                         
+            st.write("---")
+            
+            st.write("Lista de cámaras registradas:")
+            
+            try:
+                response = requests.get("http://api:8000/camaras", headers=headers)
+                
+                if response.status_code == 200:
+                    lista_camaras = response.json()['data']
+                    if lista_camaras:
+                        
+                        df_visual = pd.DataFrame(lista_camaras)
+                        edited_df = st.data_editor(
+                            df_visual[["ubicacion", "modelo"]],
+                            column_config={
+                                "ubicacion": "Ubicación",
+                                "modelo": "Modelo"
+                            },
+                            disabled=["ubicacion", "modelo"], # No queremos que editen la matrícula aquí
+                            hide_index=True,
+                            width='stretch'
+                        )
+
+                        opciones = {f"{c['ubicacion']} ({c['modelo']})": c['id'] for c in lista_camaras}
+                        
+                        cam_a_borrar_label = st.selectbox(
+                            "Selecciona una cámara para eliminar:",
+                            options=list(opciones.keys()),
+                            index=None,
+                            placeholder="Elige una cámara..."
+                        )
+                        
+                        if st.button("Eliminar cámara seleccionada", type="primary"):
+                            if cam_a_borrar_label:
+                                id_seleccionado = opciones[cam_a_borrar_label]
+                                r = requests.delete(f"http://api:8000/camaras/{id_seleccionado}", headers=headers)
+                                
+                                if r.status_code == 200:
+                                    st.success(f"Cámara '{cam_a_borrar_label}' eliminada.")
+                                    st.rerun()
+                                else:
+                                    st.error(f"Error al eliminar: {r.json().get('detail', 'Error desconocido')}")
+                    else:
+                        st.info("No hay cámaras registradas.")
+                else:
+                    st.error("Error al obtener cámaras de la API")
+            except Exception as e:
+                st.error(f"Error de conexión: {e}")
+                
+                        
         with subtab_autorizados:
             st.subheader("Gestión de vehículos autorizados")
             
+            st.write("Añade la matrícula del vehículo que deseas autorizar.")
             # Formulario para añadir
             col1, col2 = st.columns([2, 1])
             with col1:
-                nueva_matricula = st.text_input("Nueva matrícula a autorizar", placeholder="1234ABC").upper()
+                nueva_matricula = st.text_input("➕ Nueva matrícula a autorizar", placeholder="1234ABC").upper()
                 nueva_matricula = "".join(nueva_matricula.split())  # Eliminar espacios" 
-                print(f"DEBUG: Nueva matrícula ingresada: '{nueva_matricula}'")  # Debug para ver el valor exacto
             with col2:
                 st.write(" ") # Espaciado
-                if st.button("➕ Autorizar"):
+                if st.button("Confirmar"):
                     if nueva_matricula:
                         res = requests.post("http://api:8000/autorizados", data={'matricula': nueva_matricula}, headers=headers)
                         st.success(f"Matrícula {nueva_matricula} añadida.")
@@ -265,18 +299,35 @@ if authentication_status:
                     lista_auth = res_list.json()['data']
                     if lista_auth:
                         df_auth = pd.DataFrame(lista_auth)
-                        st.table(df_auth[['matricula', 'fecha']]) # Tabla sencilla para control
+                        
+                        df_auth["Eliminar"] = False
+                        st.write("Lista de matriculas autorizadas.")
                         
                         # Opción para eliminar
-                        mat_eliminar = st.selectbox("Selecciona matrícula para quitar acceso", [m['matricula'] for m in lista_auth])
-                        if st.button("Quitar autorización"):
-                            requests.delete(f"http://api:8000/autorizados/{mat_eliminar}", headers=headers)
-                            st.warning(f"Acceso revocado para {mat_eliminar}")
-                            st.rerun()
+                        edited_df = st.data_editor(
+                            df_auth[["matricula", "fecha", "Eliminar"]],
+                            column_config={
+                                "matricula": "Matrícula Autorizada",
+                                "fecha": "Fecha de Alta",
+                                "Eliminar": st.column_config.CheckboxColumn(help="Marcar para borrar")
+                            },
+                            disabled=["matricula", "fecha"], # No queremos que editen la matrícula aquí
+                            hide_index=True,
+                            width='stretch'
+                        )
+                        # Filtramos cuáles han sido marcadas
+                        seleccionados = edited_df[edited_df["Eliminar"] == True]["matricula"].tolist()
+
+                        if seleccionados:
+                            if st.button(f"Eliminar {len(seleccionados)} autorizado(s)", type="primary"):
+                                for mat in seleccionados:
+                                    requests.delete(f"http://api:8000/autorizados/{mat}", headers=headers)
+                                st.success("Registros eliminados correctamente")
+                                st.rerun()
                     else:
                         st.info("No hay vehículos autorizados.")
             except Exception as e:
-                st.error(f"Error al cargar autorizados: {e}")
+                st.error(f"Error: {e}")
 
         # Botón para refrescar manualmente
         if st.button('Actualizar Datos'):
