@@ -3,14 +3,15 @@ import cv2
 import numpy as np
 import uvicorn
 from src.database.db_manager import insertar_deteccion, listar_accesos_deshautorizados, listar_camaras, insertar_camara, eliminar_camara, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
-from src.motor.utils import validate_plate, load_patterns
+from src.motor.utils import validate_plate, load_patterns, alerta_telegram
 import os
 import sys
+from fastapi import BackgroundTasks
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 try:
-    from config import API_KEY
+    from config import API_KEY, TELEGRAM_BOT_TOKEN, CHAT_ID
 except ImportError as e:
     print(f"Error fatal: No se encuentra config.py. {e}")
 
@@ -33,6 +34,7 @@ async def recibir_deteccion(
     confianza: float = Form(...),
     camara_id: int = Form(...),
     imagen: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     token: str = Depends(verify_api_key)
 ):
     try:
@@ -46,10 +48,24 @@ async def recibir_deteccion(
         if img is None:
             raise HTTPException(status_code=400, detail="Imagen inválida")
 
-        success = insertar_deteccion(matricula, pais, confianza, img, camara_id)
+        resultado_db = insertar_deteccion(matricula, pais, confianza, img, camara_id)
         
-        if success:
-            return {"status": "success", "message": f"Matrícula {matricula} registrada"}
+        if resultado_db and resultado_db["success"]:
+            es_autorizado = resultado_db["autorizado"]
+            
+            if not es_autorizado:
+                print(f"🚨 Alerta: Matrícula {matricula} NO autorizada. Notificando...")
+                background_tasks.add_task(
+                    alerta_telegram, 
+                    matricula, 
+                    camara_id, 
+                    TELEGRAM_BOT_TOKEN, 
+                    CHAT_ID
+                )
+            else:
+                print(f"✅ Acceso correcto: Matrícula {matricula} autorizada.")
+                
+            return {"status": "success", "message": f"Matrícula {matricula} registrada", "autorizado": es_autorizado}
         else:
             raise HTTPException(status_code=500, detail="Error al insertar en DB")
 

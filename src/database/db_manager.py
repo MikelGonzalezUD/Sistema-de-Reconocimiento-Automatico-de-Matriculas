@@ -43,22 +43,25 @@ def insertar_deteccion(matricula, pais, confianza, imagen_np, camara_id):
         # Convertir imagen OpenCV (numpy) a bytes para BYTEA
         success, encoded_image = cv2.imencode('.jpg', imagen_np)
         if not success:
-            return False
+            return {"success": False, "autorizado": False}
         content = encoded_image.tobytes()
 
         # Insertar el acceso
         cur.execute("""
             INSERT INTO accesos (vehiculo_id, camara_id, confianza, matricula_img, autorizado)
             VALUES (%s, %s, %s, %s, (SELECT EXISTS(SELECT 1 FROM autorizados WHERE matricula = %s)))
+            RETURNING autorizado;
         """, (vehiculo_id, camara_id, confianza, psycopg2.Binary(content), matricula.upper()))
+        
+        es_autorizado = cur.fetchone()[0]
 
         conn.commit()
         cur.close()
-        return True
+        return {"success": True, "autorizado": es_autorizado}
     except Exception as e:
         print(f"❌ Error en DB: {e}")
         if conn: conn.rollback()
-        return False
+        return {"success": False, "autorizado": False}
     finally:
         if conn: conn.close()
         

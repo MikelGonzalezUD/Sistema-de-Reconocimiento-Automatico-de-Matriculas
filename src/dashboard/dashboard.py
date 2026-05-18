@@ -16,6 +16,9 @@ import yaml
 
 count = st_autorefresh(interval=10000, limit=100, key="fscounter")
 
+if "ultimo_id_incidencia" not in st.session_state:
+    st.session_state.ultimo_id_incidencia = None
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 try:
@@ -346,6 +349,12 @@ if authentication_status:
                     st.metric(label="Número de alertas", value=len(incidencias), delta="No autorizados", delta_color="inverse")
                     
                     if incidencias:
+                        id_mas_reciente = incidencias[0]['acceso_id']
+                        if st.session_state.ultimo_id_incidencia is not None and id_mas_reciente != st.session_state.ultimo_id_incidencia:
+                            st.toast(f"🚨 ¡ALERTA! Vehículo no autorizado detectado en {incidencias[0]['ubicacion']}", icon="🔴")
+                            
+                        st.session_state.ultimo_id_incidencia = id_mas_reciente
+        
                         df_inc = pd.DataFrame(incidencias)
                         
                         columnas_ordenadas = ["fecha_hora", "ubicacion", "matricula", "matricula_img"]

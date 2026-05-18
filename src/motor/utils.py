@@ -144,3 +144,25 @@ def ordenar_ocr(chars, results_ocr, char_label, threshold=10):
     ).upper()
     
     return clean_text
+
+
+def alerta_telegram(matricula, camara_id, TELEGRAM_TOKEN, CHAT_ID):
+    mensaje = f"🚨 ¡ALERTA! Vehículo no autorizado detectado\n🚗 Matrícula: {matricula.upper()}\n📷 ID Cámara: {camara_id}"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+    try:
+        # Añadimos print para ver qué intenta enviar en los logs de Docker
+        print(f"DEBUG TELEGRAM: Intentando enviar a Chat {CHAT_ID}")
+        
+        response = requests.post(
+            url, 
+            json={"chat_id": CHAT_ID, "text": mensaje}, 
+            timeout=5
+        )
+        
+        # Esto imprimirá el código de estado (200, 400, 401, etc.) y la razón del fallo en los logs
+        print(f"DEBUG TELEGRAM: Código de respuesta: {response.status_code}")
+        print(f"DEBUG TELEGRAM: Respuesta del servidor: {response.text}")
+        
+    except Exception as e:
+        print(f"❌ Error crítico de red enviando Telegram: {e}")
