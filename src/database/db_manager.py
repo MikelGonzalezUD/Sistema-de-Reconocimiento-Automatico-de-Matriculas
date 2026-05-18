@@ -2,6 +2,7 @@ import psycopg2
 import cv2
 import numpy as np
 import sys
+import base64
 from pathlib import Path
 
 root_path = Path.cwd().parent.parent
@@ -180,5 +181,39 @@ def eliminar_vehiculo_autorizado(matricula):
         cur.execute("DELETE FROM autorizados WHERE matricula = %s;", (matricula.upper(),))
         conn.commit()
         return True
+    finally:
+        if conn: conn.close()
+        
+        
+def listar_accesos_deshautorizados():
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT a.acceso_id, v.matricula, c.ubicacion, a.timestamp, a.matricula_img
+            FROM accesos a
+            JOIN vehiculos v ON a.vehiculo_id = v.vehiculo_id
+            JOIN camaras c ON a.camara_id = c.camara_id
+            WHERE a.autorizado = FALSE
+            ORDER BY a.timestamp DESC;
+        """)
+        rows = cur.fetchall()
+        
+        resultado = []
+        for r in rows:
+            img_b64 = None
+            if r[4] is not None:
+                bytes_img = r[4].tobytes() if isinstance(r[4], memoryview) else r[4]
+                img_b64 = f"data:image/jpeg;base64,{base64.b64encode(bytes_img).decode('utf-8')}"
+                
+            resultado.append({
+                "acceso_id": r[0],
+                "matricula": r[1],
+                "ubicacion": r[2],
+                "fecha_hora": r[3].strftime("%Y-%m-%d %H:%M:%S"),
+                "matricula_img": img_b64
+                })
+        return resultado
     finally:
         if conn: conn.close()

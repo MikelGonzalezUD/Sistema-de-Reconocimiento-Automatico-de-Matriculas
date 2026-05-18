@@ -1,3 +1,4 @@
+import base64
 import os
 import requests
 import streamlit as st
@@ -203,12 +204,12 @@ if authentication_status:
             
     with tab_admin:
         st.header("Panel de Administración")
+        headers = {'x-api-key': API_KEY}
         
-        subtab_camaras, subtab_autorizados = st.tabs(["Gestión de cámaras", "Lista de autorizados"])
+        subtab_camaras, subtab_autorizados, subtab_incidencias = st.tabs(["Gestión de cámaras", "Lista de autorizados", "Incidencias"])
         
         with subtab_camaras:
             st.subheader("Gestión de cámaras registradas")
-            headers = {'x-api-key': API_KEY}
             
             st.write("Formulario para registrar nueva cámara:")
             
@@ -222,6 +223,7 @@ if authentication_status:
                     response = requests.post("http://api:8000/camaras", data=payload, headers=headers)
                     if response.status_code == 200:
                         st.success("¡Cámara registrada!")
+
                         
             st.write("---")
             
@@ -284,11 +286,17 @@ if authentication_status:
                 nueva_matricula = "".join(nueva_matricula.split())  # Eliminar espacios" 
             with col2:
                 st.write(" ") # Espaciado
-                if st.button("Confirmar"):
-                    if nueva_matricula:
-                        res = requests.post("http://api:8000/autorizados", data={'matricula': nueva_matricula}, headers=headers)
-                        st.success(f"Matrícula {nueva_matricula} añadida.")
+            if st.button("Confirmar"):
+                if nueva_matricula:
+                    res = requests.post("http://api:8000/autorizados", data={'matricula': nueva_matricula}, headers=headers)
+                    if res.status_code == 200:
+                        st.success(f"¡Éxito! Matrícula {nueva_matricula} añadida correctamente.")
+                        import time
+                        time.sleep(1)
                         st.rerun()
+
+                    elif res.status_code == 400:
+                        st.error(f"Error: Formato de matrícula \"{nueva_matricula}\" no válido.")
             
             st.write("---")
             
@@ -328,6 +336,41 @@ if authentication_status:
                         st.info("No hay vehículos autorizados.")
             except Exception as e:
                 st.error(f"Error: {e}")
+                
+        with subtab_incidencias:
+            st.subheader("Incidencias")
+            try:
+                res_incidencias = requests.get("http://api:8000/incidencias", headers=headers)
+                if res_incidencias.status_code == 200:
+                    incidencias = res_incidencias.json()['data']
+                    st.metric(label="Número de alertas", value=len(incidencias), delta="No autorizados", delta_color="inverse")
+                    
+                    if incidencias:
+                        df_inc = pd.DataFrame(incidencias)
+                        
+                        columnas_ordenadas = ["fecha_hora", "ubicacion", "matricula", "matricula_img"]
+                        df_inc = df_inc[columnas_ordenadas]
+                        
+                        st.dataframe(
+                            df_inc,
+                            column_config={
+                                "fecha_hora": "Fecha y Hora",
+                                "ubicacion": "Ubicación / Cámara",
+                                "matricula": "Matrícula Detectada",
+                                "matricula_img": st.column_config.ImageColumn(
+                                    "Captura", 
+                                    help="Miniatura de la matrícula detectada (Haz clic para ampliar)"
+                                )
+                            },
+                            hide_index=True,   
+                            width='stretch' 
+                        )
+                    else:
+                        st.info("No hay incidencias registradas.")
+                else:
+                    st.error("Error al obtener incidencias de la API")
+            except Exception as e:
+                st.error(f"Error de conexión: {e}")
 
         # Botón para refrescar manualmente
         if st.button('Actualizar Datos'):

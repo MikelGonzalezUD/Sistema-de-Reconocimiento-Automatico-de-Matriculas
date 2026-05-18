@@ -2,7 +2,8 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, Depe
 import cv2
 import numpy as np
 import uvicorn
-from src.database.db_manager import insertar_deteccion, listar_camaras, insertar_camara, eliminar_camara, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
+from src.database.db_manager import insertar_deteccion, listar_accesos_deshautorizados, listar_camaras, insertar_camara, eliminar_camara, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
+from src.motor.utils import validate_plate, load_patterns
 import os
 import sys
 
@@ -14,6 +15,7 @@ except ImportError as e:
     print(f"Error fatal: No se encuentra config.py. {e}")
 
 app = FastAPI(title="ALPR API Gateway")
+patterns = load_patterns("src/motor/patrones.json")
 
 async def verify_api_key(x_api_key: str = Header(...)):
     if x_api_key != API_KEY:
@@ -84,10 +86,15 @@ async def api_listar_autorizados(_ = Depends(verify_api_key)):
 
 @app.post("/autorizados")
 async def api_añadir_autorizado(matricula: str = Form(...), _ = Depends(verify_api_key)):
-    res = insertar_vehiculo_autorizado(matricula)
-    if res:
-        return {"status": "success", "message": "Matrícula autorizada"}
-    return {"status": "exists", "message": "La matrícula ya estaba autorizada"}
+    pais = validate_plate(matricula, patterns=patterns)  
+    if pais:
+        res = insertar_vehiculo_autorizado(matricula)
+        if res:
+            return {"status": "success", "message": "Matrícula autorizada"}
+        return {"status": "exists", "message": "La matrícula ya estaba autorizada"}
+    
+    raise HTTPException(status_code=400, detail="Formato de matrícula no válido. Debe cumplir los patrones de España, Francia o Finlandia.")
+    
 
 @app.delete("/autorizados/{matricula}")
 async def api_eliminar_autorizado(matricula: str, _ = Depends(verify_api_key)):
@@ -95,7 +102,10 @@ async def api_eliminar_autorizado(matricula: str, _ = Depends(verify_api_key)):
     return {"status": "success", "message": "Autorización revocada"}
 
 
-
+@app.get("/incidencias")
+async def api_listar_incidencias(_ = Depends(verify_api_key)):
+    data = listar_accesos_deshautorizados()
+    return {"status": "success", "data": data}
 
 
 if __name__ == "__main__":
