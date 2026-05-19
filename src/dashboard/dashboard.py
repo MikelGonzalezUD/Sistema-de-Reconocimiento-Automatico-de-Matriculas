@@ -14,6 +14,9 @@ import streamlit_authenticator as stauth
 from yaml import SafeLoader
 import yaml
 
+# CONFIGURACIÓN DE LA PÁGINA 
+st.set_page_config(page_title="ALPR Dashboard", layout="wide")
+
 count = st_autorefresh(interval=10000, limit=100, key="fscounter")
 
 if "ultimo_id_incidencia" not in st.session_state:
@@ -80,10 +83,6 @@ if authentication_status:
 
     # CREAR TABS 
     tab_general_data, tab_analytics, tab_admin = st.tabs(["Resumen de accesos", "Analisis de Datos", "Administración"])
-
-    # CONFIGURACIÓN DE LA PÁGINA 
-    st.set_page_config(page_title="ALPR Dashboard", layout="wide")
-
 
     # LÓGICA DEL DASHBOARD 
     data = get_data()
@@ -157,22 +156,33 @@ if authentication_status:
         else:
             st.subheader("Estadísticas Avanzadas")
             
-            #Datos generales
-            k1, k2, k3 = st.columns(3)
+            # 1. CÁLCULO PREVIO DE LOS ACCESOS NO AUTORIZADOS
+            total_accesos = len(data)
+            no_autorizados = len(data[data['Permitido'] == '❌ NO'])
+            porcentaje_no_auth = (no_autorizados / total_accesos * 100) if total_accesos > 0 else 0
+            
+            # 2. MÉTRICAS GENERALES ENRIQUECIDAS
+            # Ampliamos a 4 columnas para dar un peso visual brutal a la seguridad
+            k1, k2, k3, k4 = st.columns(4)
             k1.metric("Vehículos únicos", data["matricula"].nunique())
             k2.metric("Confianza media", f"{data['confianza'].mean():.1f}%")
             k3.metric("Países detectados", data["pais"].nunique())
             
+            # La métrica de seguridad destaca con flecha de alerta (delta_color="inverse")
+            k4.metric(
+                label="Accesos NO autorizados", 
+                value=f"{no_autorizados}", 
+                delta=f"{porcentaje_no_auth:.1f}% del total", 
+                delta_color="inverse"
+            )
+            
             st.divider()
             
+            # 3. GRÁFICOS (Mantenemos tu excelente lógica de visualización)
             col_pie, col_hist = st.columns([1, 2])
-            
             with col_pie:
                 st.write("**Distribución por País**")
                 country_counts = data['pais'].value_counts()
-                # Gráfico de tarta
-                st.write(country_counts) 
-                # Si quieres algo visual sin librerías extra:
                 st.bar_chart(country_counts)
 
             with col_hist:
@@ -180,30 +190,47 @@ if authentication_status:
                 all_hours = pd.DataFrame({'hour': range(24)})
                 hour_counts = data.groupby('hour').size().reset_index(name='counts')
                 chart_data = all_hours.merge(hour_counts, on='hour', how='left').fillna(0)
-                
                 st.area_chart(chart_data.set_index('hour'))
             
             st.divider()
             
-            #Frecuencia por matricula
+            # Frecuencia por matrícula
             freq = data['matricula'].value_counts().reset_index()
             freq.columns = ['matricula', 'frecuencia']
-
             st.subheader("Matrículas más detectadas")
             st.bar_chart(freq.set_index('matricula').head(10), sort=False)
 
             st.divider()
             
-            # Mapa de calor de actividad (Día de la semana vs Hora)
+            # Mapa de calor de actividad
             st.write("**Actividad Semanal**")
-            data['day_name'] = data['timestamp'].dt.day_name()
-            # Ordenar días
-            days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-            heatmap_data = data.groupby(['day_name', 'hour']).size().unstack(fill_value=0)
-            # Reordenar filas
-            heatmap_data = heatmap_data.reindex(days_order)
+            if data['timestamp'].dt.tz is None:
+                data['timestamp'] = data['timestamp'].dt.tz_localize('UTC')
+                
+            data['timestamp_madrid'] = data['timestamp'].dt.tz_convert('Europe/Madrid')
+            data['hora_local'] = data['timestamp_madrid'].dt.hour
+            data['day_name'] = data['timestamp_madrid'].dt.day_name()
             
-            st.dataframe(heatmap_data.style.background_gradient(cmap="YlGnBu"), width='stretch')
+            heatmap_data = data.groupby(['day_name', 'hora_local']).size().unstack(fill_value=0)
+            
+            all_hours = list(range(24))
+            heatmap_data = heatmap_data.reindex(columns=all_hours, fill_value=0)
+            
+            days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            
+            days_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+            heatmap_data = heatmap_data.reindex(days_order).fillna(0)
+            heatmap_data.index = days_es
+            
+            heatmap_data_transposed = heatmap_data.T
+            
+            heatmap_data_transposed = heatmap_data_transposed.astype(int)
+
+            st.dataframe(
+                heatmap_data_transposed.style.background_gradient(cmap="YlGnBu").format("{:d}"),
+                width='stretch',
+                height=500 # Le damos altura fija para que se desplieguen bien las 24 filas de horas
+            )
             
     with tab_admin:
         st.header("Panel de Administración")
