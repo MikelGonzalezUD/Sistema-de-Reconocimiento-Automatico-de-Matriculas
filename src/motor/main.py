@@ -1,7 +1,7 @@
 import json
 from ultralytics import YOLO
 import cv2
-import imutils  
+import imutils
 import re
 import requests
 import numpy as np
@@ -14,176 +14,177 @@ from deep_sort_realtime.deepsort_tracker import DeepSort
 root_path = Path.cwd().parent.parent
 if str(root_path) not in sys.path:
     sys.path.append(str(root_path))
-    
+
 from config import LP_MODEL_PATH, OCR_MODEL_PATH, CAMERA_ID, API_URL, API_KEY
 from src.database.db_manager import insertar_deteccion
 
 
-TRACK_MAX_AGE = 40        # Frames para mantener un track perdido vivo
-VOTING_BUFFER_SIZE = 10   # Numero de frames para agregar y decidir el "mejor" resultado
-FRAME_SKIP = 2            # Procesar cada N frames para reducir carga computacional
+# PARÁMETROS
+TRACK_MAX_AGE = 40        # frames para mantener un track perdido vivo
+VOTING_BUFFER_SIZE = 10   # lecturas necesarias antes de enviar la matrícula
+FRAME_SKIP = 2            # procesar uno de cada N frames para reducir carga
 frame_count = 0
 ocr_frame_count = 0
 
-# Inicializar Tracker DeepSort
-tracker = DeepSort(max_age=TRACK_MAX_AGE, n_init=3, max_iou_distance=0.7)
-
-# Carga de patrones desde JSON
-patterns = load_patterns("patrones.json")
-
-# Memoria de tracks: Almacena el historial de OCR por ID de track
+# historial de OCR por ID de track: {track_id: {texts, country, sent, max_conf}}
 tracked_plates = {}
 
-# Cuda check
-print("Using device:", "cuda" if torch.cuda.is_available() else "cpu")
+# INICIALIZACIÓN
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print("Dispositivo:", device)
 
-#Inicializar modelos
+tracker = DeepSort(max_age=TRACK_MAX_AGE, n_init=3, max_iou_distance=0.7)
+patterns = load_patterns("patrones.json")
+
 model_lp = YOLO(LP_MODEL_PATH).to(device)
 model_ocr = YOLO(OCR_MODEL_PATH).to(device)
 
-# Inicializar video captura de la cámara o video
+# fuente de vídeo: descomentar la línea correspondiente al entorno de producción
 # cap = cv2.VideoCapture("rtsp://192.168.1.132:554/stream1")
-#cap = cv2.VideoCapture("https://192.168.1.130:8080/video")
+# cap = cv2.VideoCapture("https://192.168.1.130:8080/video")
 cap = cv2.VideoCapture("parking2.MOV")
 
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret: break
-    
-    frame_count += 1
-    if frame_count > 1000:  # Reiniciar contador para evitar overflow
-        frame_count = 0
-    if frame_count % FRAME_SKIP != 0:
-        continue
-    
-    frame = cv2.resize(frame, (640, 360))
+# BUCLE PRINCIPAL
+try:
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret: break
 
-    # 1. Detección de Placas
-    results = model_lp(frame, conf=0.5, verbose=False)
-    detections = []
-    for r in results:
-        for box in r.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            conf = box.conf[0].item()
-            detections.append(([x1, y1, x2 - x1, y2 - y1], conf, 0))
+        frame_count += 1
+        if frame_count > 1000:  # reiniciar para evitar overflow
+            frame_count = 0
+        if frame_count % FRAME_SKIP != 0:
+            continue
 
-    # 2. Tracking
-    tracks = tracker.update_tracks(detections, frame=frame)
+        frame = cv2.resize(frame, (640, 360))
 
-    for track in tracks:
-        if not track.is_confirmed(): 
-            continue
-        
-        track_id = track.track_id
-        x1, y1, x2, y2 = map(int, track.to_ltrb())
-        area = (x2 - x1) * (y2 - y1)
-        # print(f"Area: {area}")
-        if area < 400: 
-            continue
-        
-        if track_id in tracked_plates and tracked_plates[track_id]["sent"]:
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2)
-            cv2.putText(frame, f"ID:{track_id} [{pais}] {best_plate}", (x1, y1 - 10), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-            continue
-        
-        ocr_frame_count += 1
-        if ocr_frame_count > 10000:  # Reiniciar contador para evitar overflow
-            ocr_frame_count = 0
-        if ocr_frame_count % (FRAME_SKIP) != 0:
-            continue
-        
-        # Crop y Rectificación
-        plate_crop = frame[max(0, y1-15):y2+15, max(0, x1-15):x2+15]
-        if plate_crop.size == 0: continue
-        
-        # plate_rectified = rectify_plate(plate_crop)
-        plate_rectified = plate_crop
-        
-        # cv2.imshow("Ultima Matricula Detectada", imutils.resize(plate_rectified, width=300))
+        # 1. DETECCIÓN DE MATRÍCULAS
+        results = model_lp(frame, conf=0.5, verbose=False)
+        detections = []
+        for r in results:
+            for box in r.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                conf = box.conf[0].item()
+                detections.append(([x1, y1, x2 - x1, y2 - y1], conf, 0))
 
-        # 3. OCR con YOLO (Detección de caracteres)
-        results_ocr = model_ocr(plate_rectified, conf=0.4, imgsz=640, verbose=False)
-        
-        chars = []
-        for res in results_ocr:
-            for b in res.boxes:
-                # Guardamos la posición X y el nombre de la clase (el caracter)
-                x_center = b.xywh[0][0].item()
-                y_center = b.xywh[0][1].item()
-                char_label = model_ocr.names[int(b.cls[0])]
-                chars.append((x_center, y_center, char_label))
-                
-        # ORDENAR POR Y (Altura)
-        chars.sort(key=lambda x: x[1])
-        
-        lines = []
-        threshold = np.mean([b.xywh[0][3].item() for res in results_ocr for b in res.boxes]) * 0.5
-        
-        for char in chars:
-            placed = False
+        # 2. TRACKING
+        tracks = tracker.update_tracks(detections, frame=frame)
+
+        for track in tracks:
+            if not track.is_confirmed():
+                continue
+
+            track_id = track.track_id
+            x1, y1, x2, y2 = map(int, track.to_ltrb())
+            area = (x2 - x1) * (y2 - y1)
+            if area < 400:
+                continue
+
+            # si ya fue enviado, solo mostrar el resultado en pantalla
+            if track_id in tracked_plates and tracked_plates[track_id]["sent"]:
+                sent = tracked_plates[track_id]
+                sent_texts = sent["texts"]
+                sent_plate = max(set(sent_texts), key=sent_texts.count) if sent_texts else "?"
+                sent_pais = sent["country"]
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2)
+                cv2.putText(frame, f"ID:{track_id} [{sent_pais}] {sent_plate}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                continue
+
+            ocr_frame_count += 1
+            if ocr_frame_count > 10000:
+                ocr_frame_count = 0
+            if ocr_frame_count % FRAME_SKIP != 0:
+                continue
+
+            # recorte con margen alrededor de la matrícula
+            plate_crop = frame[max(0, y1-15):y2+15, max(0, x1-15):x2+15]
+            if plate_crop.size == 0: continue
+
+            # plate_rectified = rectify_plate(plate_crop)
+            plate_rectified = plate_crop
+
+            # 3. OCR
+            results_ocr = model_ocr(plate_rectified, conf=0.4, imgsz=640, verbose=False)
+
+            chars = []
+            char_heights = []
+            for res in results_ocr:
+                for b in res.boxes:
+                    x_center = b.xywh[0][0].item()
+                    y_center = b.xywh[0][1].item()
+                    char_label = model_ocr.names[int(b.cls[0])]
+                    chars.append((x_center, y_center, char_label))
+                    char_heights.append(b.xywh[0][3].item())
+
+            if not chars:
+                continue
+
+            # ordenar caracteres por fila (Y) y dentro de cada fila por columna (X)
+            chars.sort(key=lambda x: x[1])
+            lines = []
+            threshold = np.mean(char_heights) * 0.5
+
+            for char in chars:
+                placed = False
+                for line in lines:
+                    if abs(char[1] - line[0][1]) < threshold:
+                        line.append(char)
+                        placed = True
+                        break
+                if not placed:
+                    lines.append([char])
+
             for line in lines:
-                # si está cerca en Y, pertenece a esa línea
-                if abs(char[1] - line[0][1]) < threshold:
-                    line.append(char)
-                    placed = True
-                    break
-            if not placed:
-                lines.append([char])
-        
-        # ORDENAR POR X (Izquierda a derecha)
-        for line in lines:
-            line.sort(key=lambda x: x[0])
-            
-        lines.sort(key=lambda line: line[0][1])
-        clean_text = "".join(
-            char[2] for line in lines for char in line
-        ).upper()
+                line.sort(key=lambda x: x[0])
+            lines.sort(key=lambda line: line[0][1])
 
+            clean_text = "".join(char[2] for line in lines for char in line).upper()
 
-        # 4. Post-procesamiento con el JSON (desde utils)
-        pais_detectado = validate_plate(clean_text, patterns)
+            # 4. VALIDACIÓN
+            pais_detectado = validate_plate(clean_text, patterns)
 
-        if pais_detectado:
-            if track_id not in tracked_plates:
-                tracked_plates[track_id] = {"texts": [], "country": pais_detectado, "sent": False, "max_conf": 0.0}
-            
-            tracked_plates[track_id]["texts"].append(clean_text)
-            
-            conf_actual = track.get_det_conf() if track.get_det_conf() else 0.8
-            if conf_actual > tracked_plates[track_id]["max_conf"]:
-                tracked_plates[track_id]["max_conf"] = conf_actual
+            if pais_detectado:
+                if track_id not in tracked_plates:
+                    tracked_plates[track_id] = {"texts": [], "country": pais_detectado, "sent": False, "max_conf": 0.0}
 
-        # Lógica de visualización
-        display_info = "Procesando..."
-        if track_id in tracked_plates and tracked_plates[track_id]["texts"]:
-            text_list = tracked_plates[track_id]["texts"]
-            # Votación: el texto más repetido gana
-            best_plate = max(set(text_list), key=text_list.count)
-            pais = tracked_plates[track_id]["country"]
-            conf = tracked_plates[track_id]["max_conf"] * 100
-            
-            display_info = f"[{pais}] {best_plate}"
-            
-            #ENVIAR A LA DB
-            if len(text_list) >= VOTING_BUFFER_SIZE and not tracked_plates[track_id]["sent"]:
-                success = enviar_deteccion(best_plate, pais, conf, plate_rectified, CAMERA_ID, API_URL, API_KEY)
-                if success:
-                    tracked_plates[track_id]["sent"] = True
-                    print(f"✅ ID {track_id} inyectado con éxito: {best_plate}")
-                    # print(f"Tracked plates: {len(tracked_plates)}")
-                    # print(f"{tracked_plates}")
+                tracked_plates[track_id]["texts"].append(clean_text)
 
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(frame, f"ID:{track_id} {display_info}", (x1, y1 - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2) 
+                conf_actual = track.get_det_conf() if track.get_det_conf() else 0.8
+                if conf_actual > tracked_plates[track_id]["max_conf"]:
+                    tracked_plates[track_id]["max_conf"] = conf_actual
 
-    if frame is not None and frame.size != 0:
-        resized_frame = imutils.resize(frame, width=1024)
-        cv2.imshow("ALPR YOLO + JSON", resized_frame)
-    if cv2.waitKey(1) & 0xFF == 27: break
+            # 5. VISUALIZACIÓN Y ENVÍO
+            display_info = "Procesando..."
+            if track_id in tracked_plates and tracked_plates[track_id]["texts"]:
+                text_list = tracked_plates[track_id]["texts"]
+                # votación: el texto más repetido gana
+                best_plate = max(set(text_list), key=text_list.count)
+                pais = tracked_plates[track_id]["country"]
+                conf = tracked_plates[track_id]["max_conf"] * 100
+                display_info = f"[{pais}] {best_plate}"
 
-cap.release()
-cv2.destroyAllWindows()
+                if len(text_list) >= VOTING_BUFFER_SIZE and not tracked_plates[track_id]["sent"]:
+                    success = enviar_deteccion(best_plate, pais, conf, plate_rectified, CAMERA_ID, API_URL, API_KEY)
+                    if success:
+                        tracked_plates[track_id]["sent"] = True
+                        print(f"✅ ID {track_id} enviado: {best_plate}")
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, f"ID:{track_id} {display_info}", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # eliminar tracks enviados que ya no están activos para evitar crecimiento ilimitado
+        active_ids = {t.track_id for t in tracks if t.is_confirmed()}
+        tracked_plates = {tid: data for tid, data in tracked_plates.items()
+                          if tid in active_ids or not data["sent"]}
+
+        if frame is not None and frame.size != 0:
+            resized_frame = imutils.resize(frame, width=1024)
+            cv2.imshow("ALPR YOLO + JSON", resized_frame)
+        if cv2.waitKey(1) & 0xFF == 27: break
+
+finally:
+    cap.release()
+    cv2.destroyAllWindows()

@@ -38,3 +38,7 @@ notebooks/fasterrcnn.ipynb
 
 #Configuracion de autenticación (contiene contraseñas hasheadas, no subir a repositorio)
 src/dashboard/config_auth.yaml
+
+.play*/
+.under*/
+CL*.md
