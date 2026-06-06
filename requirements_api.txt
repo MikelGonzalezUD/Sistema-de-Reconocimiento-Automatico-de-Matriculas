@@ -6,3 +6,4 @@ opencv-python-headless==4.13.0.92
 numpy
 python-dotenv==1.2.2
 requests==2.33.0
+apscheduler==3.10.4

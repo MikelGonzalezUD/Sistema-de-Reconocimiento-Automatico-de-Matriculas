@@ -178,6 +178,28 @@ def eliminar_vehiculo_autorizado(matricula):
 
 # ACCESOS
 
+def limpiar_imagenes_antiguas(dias: int = 30) -> int:
+    """Elimina las imágenes de matrículas con más de `dias` días para cumplir con la LOPD."""
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE accesos
+            SET matricula_img = NULL
+            WHERE matricula_img IS NOT NULL
+              AND timestamp < NOW() - INTERVAL '%s days';
+        """, (dias,))
+        conn.commit()
+        return cur.rowcount
+    except Exception as e:
+        print(f"Error limpiando imágenes antiguas: {e}")
+        if conn: conn.rollback()
+        return 0
+    finally:
+        if conn: conn.close()
+
+
 def listar_todos_accesos():
     conn = None
     try:

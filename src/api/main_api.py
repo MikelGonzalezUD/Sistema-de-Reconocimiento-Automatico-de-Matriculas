@@ -1,12 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, Depends, BackgroundTasks
 import cv2
 import numpy as np
 import uvicorn
-from src.database.db_manager import insertar_deteccion, listar_accesos_deshautorizados, listar_todos_accesos, listar_camaras, insertar_camara, eliminar_camara, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado
+from src.database.db_manager import insertar_deteccion, listar_accesos_deshautorizados, listar_todos_accesos, listar_camaras, insertar_camara, eliminar_camara, listar_vehiculos_autorizados, insertar_vehiculo_autorizado, eliminar_vehiculo_autorizado, limpiar_imagenes_antiguas
 from src.motor.utils import validate_plate, load_patterns, alerta_telegram
 import os
 import sys
-from fastapi import BackgroundTasks
+from apscheduler.schedulers.background import BackgroundScheduler
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
@@ -17,6 +17,17 @@ except ImportError as e:
 
 app = FastAPI(title="ALPR API Gateway")
 patterns = load_patterns("src/motor/patrones.json")
+
+# LIMPIEZA PROGRAMADA DE IMÁGENES (LOPD: máx. 30 días)
+
+def _job_limpiar_imagenes():
+    n = limpiar_imagenes_antiguas(dias=30)
+    if n > 0:
+        print(f"[Limpieza LOPD] {n} imagen(es) eliminadas (>30 días)")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(_job_limpiar_imagenes, "cron", hour=3, minute=0)
+scheduler.start()
 
 
 # AUTENTICACIÓN

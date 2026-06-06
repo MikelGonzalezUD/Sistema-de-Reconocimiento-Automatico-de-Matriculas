@@ -79,7 +79,7 @@ Ejemplo para CPU:
 pip install torch torchvision
 ```
 
-3. Instalar el resto de dependencias:
+3. Instalar el resto de dependencias (los modelos finales ya están en `final_models/`):
 
 ```bash
 pip install -r requirements.txt

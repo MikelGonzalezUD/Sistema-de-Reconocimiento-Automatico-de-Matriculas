@@ -21,7 +21,7 @@ from src.database.db_manager import insertar_deteccion
 
 # PARÁMETROS
 TRACK_MAX_AGE = 40        # frames para mantener un track perdido vivo
-VOTING_BUFFER_SIZE = 10   # lecturas necesarias antes de enviar la matrícula
+VOTING_BUFFER_SIZE = 8   # lecturas necesarias antes de enviar la matrícula
 FRAME_SKIP = 2            # procesar uno de cada N frames para reducir carga
 frame_count = 0
 ocr_frame_count = 0
@@ -102,11 +102,11 @@ try:
             plate_crop = frame[max(0, y1-15):y2+15, max(0, x1-15):x2+15]
             if plate_crop.size == 0: continue
 
-            # plate_rectified = rectify_plate(plate_crop)
-            plate_rectified = plate_crop
+            plate_rectified = rectify_plate(plate_crop)
+            # plate_rectified = plate_crop
 
             # 3. OCR
-            results_ocr = model_ocr(plate_rectified, conf=0.4, imgsz=640, verbose=False)
+            results_ocr = model_ocr(plate_rectified, conf=0.35, imgsz=640, verbose=False)
 
             chars = []
             char_heights = []
