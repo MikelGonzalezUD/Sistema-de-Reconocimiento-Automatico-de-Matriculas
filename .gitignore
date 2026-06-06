@@ -11,7 +11,7 @@ __pycache__/
 venv/
 
 #Modelos preentrenados
-*.pt
+yolo*.pt
 *.pth
 
 #Archivo de entorno
