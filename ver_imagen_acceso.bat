@@ -1,6 +1,6 @@
 @echo off
 call venv\Scripts\activate
 cd src\database
-python db_tests.py
+python imagen_db.py
 cd ..\..
 pause
